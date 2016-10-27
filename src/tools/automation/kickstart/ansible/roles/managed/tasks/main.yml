@@ -1,0 +1,31 @@
+---
+- name: Update Base Install
+  apt: upgrade=safe update_cache=yes
+  tags:
+    - upgrade
+    - install
+
+  async: 1200
+  poll: 30
+
+- name: Set the web server hostname in the hosts file
+  lineinfile: dest=/etc/hosts
+              line='127.0.1.1 {{ hostvars[inventory_hostname].ansible_hostname }}'
+              state=present
+  tags:
+    - upgrade
+    - install
+
+
+- name: Install python dev pkg
+  apt: name=python-dev state=present
+  tags:
+    - upgrade
+    - install
+
+
+- name: Install Virtualenv
+  apt: name=python-virtualenv state=present
+  tags:
+    - upgrade
+    - install

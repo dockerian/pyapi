@@ -1,0 +1,7 @@
+{
+  "name": "Node Env",
+  "icon": "nodejs.png",
+  "package": "node-env.tar.gz",
+  "author": "foo.bar@corp.com",
+  "tags": [ "node-env", "nodejs", "foo-bar", "ALS", "helion" ],
+  "version": "0.0"}

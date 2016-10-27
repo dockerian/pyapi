@@ -1,0 +1,25 @@
+<VirtualHost *:{{ app_port }}>
+
+        WSGIApplicationGroup %{GLOBAL}
+        WSGIPassAuthorization On
+        WSGIScriptReloading On
+        WSGIDaemonProcess {{ app }} user=${APACHE_RUN_USER} group=${APACHE_RUN_GROUP} \
+           processes=1 threads=4 \
+           python-path={{ path_to_venv }}/lib/python2.7/site-packages \
+           display-name=%{GROUP}
+        WSGIScriptAlias / {{ path_to_venv }}/{{ app_wsgi }}
+
+        <Directory {{ path_to_venv }}>
+                WSGIProcessGroup {{ app }}
+                AllowOverride None
+                Require all granted
+        </Directory>
+
+        # Available loglevels: trace8, ..., trace1, debug, info, notice, warn,
+        # error, crit, alert, emerg.
+        LogLevel info
+
+        ErrorLog ${APACHE_LOG_DIR}/error.log
+        CustomLog ${APACHE_LOG_DIR}/access.log combined
+
+</VirtualHost>

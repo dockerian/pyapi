@@ -1,0 +1,9 @@
+---
+home_folder: /home/ubuntu
+
+# common package specifics are here because they need to be shared by each app
+# that uses it.
+common_pkg: common
+common_pkg_role: shared
+common_pkg_version: 0.0.1
+common_pkg_tarball: "{{ common_pkg }}-{{ common_pkg_version }}.tar.gz"

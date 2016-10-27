@@ -1,0 +1,47 @@
+---
+# Name of the deployment - lots of things will inherit from this
+deployment_name: helion-cicd
+
+# GitHub auth integration variables
+github_client_id: bb24904256c06efbe0c1
+github_client_secret: 907fb22a44ed54cfe580c036d919bfaf6ec8f377
+github_api_host: api.github.com
+github_oauth_url: https://github.com/login/oauth
+
+# leave this blank for github public cloud.
+# change it to /api/v3 for a Github Enterprise instance.
+github_api_endpoint: ""
+
+# If using a GHE instance that has a self-signed certificate,
+# set this to false.
+github_has_trusted_certificate: true
+
+# Do we want to deploy on a single machine? This one machine will host all
+# services and masquerade as every required host in the inventory.
+# single_machine: False
+
+# Do we need to use a http or https proxy? Both HTTP and HTTPS must be
+# specified if a proxy is to be utilized.
+#http_proxy: http://web-proxy.useast.hpcloud.net:8080
+#https_proxy: http://web-proxy.useast.hpcloud.net:8080
+
+# HP Helion US East region
+cloud_region: region-b.geo-1
+
+# Authentication Information
+# HP Helion - Keystone US East v2.0 (region match to {{ cloud_region }})
+cloud_auth_url: https://region-b.geo-1.identity.hpcloudsvc.com:35357/v2.0/
+
+# Cloud User Login Information
+cloud_username: user
+cloud_password: password
+cloud_tenant_name: Hewlett-Packard1111
+cloud_tenant_id: 1598960305315
+
+# Instance information required so that Kickstart can perform buildouts
+cloud_ext_net: Ext-Net
+cloud_image_id: 9d25fe2d-cf31-4b05-8c58-f238ec78e633
+cloud_flavor_id: 100
+
+# Swift URL (match to {{ cloud_region }} and {{ client_tenant_id}})
+swift_url: https://region-b.geo-1.objects.hpcloudsvc.com/v1/1598960305315

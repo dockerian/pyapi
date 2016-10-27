@@ -1,0 +1,29 @@
+---
+# This is an Ansible playbook that sets up a series on virtual machines in a cluster for Ecosystem Addins. For more
+# information on Ansible and how this file is configured, please visit: http://docs.ansible.com/playbooks_intro.html
+
+- hosts: all
+  remote_user: ubuntu
+  sudo: true
+
+  roles:
+    - managed
+    - sync-src
+
+
+- hosts: catalog-api
+  sudo: true
+  remote_user: ubuntu
+  roles:
+    - apache2
+    - common
+    - catalog-api
+
+
+- hosts: addins-api
+  sudo: true
+  remote_user: ubuntu
+  roles:
+    - apache2
+    - common
+    - addins-api

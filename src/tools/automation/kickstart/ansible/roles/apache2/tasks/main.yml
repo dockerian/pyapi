@@ -1,0 +1,12 @@
+---
+- name: Install Apache2
+  apt: name=apache2 update_cache=yes state=latest
+  tags:
+    - upgrade
+    - install
+
+- name: Install mod_wsgi
+  apt: name=libapache2-mod-wsgi update_cache=yes state=present
+  tags:
+    - upgrade
+    - install

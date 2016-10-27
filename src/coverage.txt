@@ -1,0 +1,99 @@
+Before
+==============================
+globalapi + 356 (54 tests)
+localapi + 522 (43 tests)
+total = 878 (97 tests) - duplicates: 165 (21 tests)
+
+After refactoring (mrkt-1099)
+==============================
+common = 188 (23 tests)
+globalapi + 214 (37 tests)
+localapi + 434 (56 tests)
+total = 836 (116 tests)
+
+
+
+Details reports (After refactoring)
+==============================
+Name                               Stmts   Miss  Cover   Missing
+----------------------------------------------------------------
+globalapi/__init__.py                 17      0   100%
+globalapi/package.py                  95      0   100%
+globalapi/utils.py                    17      0   100%
+globalapi/views/__init__.py            0      0   100%
+globalapi/views/home_views.py          8      0   100%
+globalapi/views/package_views.py      77      0   100%
+----------------------------------------------------------------
+TOTAL                                214      0   100%
+
+Name                              Stmts   Miss  Cover   Missing
+---------------------------------------------------------------
+localapi                             20      0   100%
+localapi.deployment                 125     35    72%   34-36, 43, 45, 51-52, 70-74, 92-106, 124, 128, 178-196, 201, 205
+localapi.logger                      24      0   100%
+localapi.logger_formatter            34      0   100%
+localapi.packages                   101     12    88%   58-60, 117-119, 165, 173, 249-252
+localapi.utils                       17      0   100%
+localapi.views                        0      0   100%
+localapi.views.addins_views          42     14    67%   27-45, 68
+localapi.views.deployment_views      63      2    97%   54-55
+localapi.views.home_views             8      0   100%
+---------------------------------------------------------------
+TOTAL                               434     63    85%
+
+Name                         Stmts   Miss  Cover   Missing
+----------------------------------------------------------
+common.py                        0      0   100%
+common/config.py                29      2    93%   31, 43
+common/keystone.py              12      0   100%
+common/logger.py                33      3    91%   46-48
+common/logger_formatter.py      34      0   100%
+common/swift.py                 93      0   100%
+----------------------------------------------------------
+TOTAL                          201      5    98%
+
+
+
+Details reports (Before refactoring)
+==============================
+
+Name                                    Stmts   Miss  Cover   Missing
+---------------------------------------------------------------------
+globalapi.py                               18      0   100%
+globalapi/api.py                            0      0   100%
+globalapi/api/keystone.py                  12      0   100%
+globalapi/api/swift.py                     83      2    98%   170-172
+globalapi/catalog.py                      101      1    99%   164
+globalapi/logger.py                        12      0   100%
+globalapi/logger_formatter.py              34     17    50%   49-71
+globalapi/utils.py                         20      0   100%
+globalapi/views.py                          0      0   100%
+globalapi/views/catalog_item_views.py      29      0   100%
+globalapi/views/catalog_views.py           36      0   100%
+globalapi/views/home_views.py              11      0   100%
+---------------------------------------------------------------------
+TOTAL                                     356     20    94%
+
+Name                                   Stmts   Miss  Cover   Missing
+--------------------------------------------------------------------
+localapi.py                               17      1    94%   36
+localapi/api.py                            0      0   100%
+localapi/api/keystone.py                  11      0   100%
+localapi/api/swift.py                     79      0   100%
+localapi/catalog.py                       96     79    18%   21-23, 31-33, 40-65, 77-126, 130-134, 140-146, 157-205, 218-244, 251-261
+localapi/deploy.py                         0      0   100%
+localapi/deploy/batch.py                  45      0   100%
+localapi/deploy/deploy.py                 65     50    23%   16-24, 30-39, 45-60, 66-83, 89-117, 122, 129
+localapi/deploy/deploy_demo.py            23     11    52%   17-38, 43
+localapi/deploy/deploy_status.py           9      3    67%   10, 17, 23
+localapi/deploy/helion_cli.py             24      0   100%
+localapi/deploy/package.py                14      8    43%   9-13, 19-21
+localapi/logger.py                        24      0   100%
+localapi/logger_formatter.py              34     17    50%   49-71
+localapi/utils.py                         17      0   100%
+localapi/views.py                          0      0   100%
+localapi/views/catalog_item_views.py      24      0   100%
+localapi/views/catalog_views.py           23      0   100%
+localapi/views/home_views.py               7      2    71%   8, 11
+--------------------------------------------------------------------
+TOTAL                                    512    171    67%

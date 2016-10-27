@@ -1,0 +1,27 @@
+---
+###
+### Get the python app packaged
+###
+- name: Remove the virtualenv
+  file: path=/opt/helion-addins/src/{{ app_role }}/.venv state=absent
+  tags:
+    - upgrade
+    - install
+
+- name: Create a venv to use
+  command: virtualenv .venv
+  args:
+    chdir: "/opt/helion-addins/src/{{ app_role }}/"
+    creates: "/opt/helion-addins/src/{{ app_role }}/.venv"
+  tags:
+    - upgrade
+    - install
+
+- name: Package the web app
+  command: .venv/bin/python setup.py sdist
+  args:
+    chdir: "/opt/helion-addins/src/{{ app_role }}/"
+    creates: "/opt/helion-addins/src/{{ app_role }}/dist/"
+  tags:
+    - upgrade
+    - install

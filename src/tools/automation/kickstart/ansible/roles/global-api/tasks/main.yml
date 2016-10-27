@@ -1,0 +1,10 @@
+---
+###
+### Get the python app packaged
+###
+- include: package-catalog-api.yml
+
+###
+### Install the python app
+###
+- include: install-catalog-api.yml

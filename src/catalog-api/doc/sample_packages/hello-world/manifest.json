@@ -1,0 +1,7 @@
+{
+  "name": "Hello World",
+  "icon": "bamboo.png",
+  "package": "hello-world.tar.gz",
+  "tags": [ "hello world", "helion", "ALS", "php", "blahblah" ],
+  "version": "1.1"
+}

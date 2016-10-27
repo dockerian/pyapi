@@ -1,0 +1,13 @@
+---
+app: localapi
+app_role: addins-api
+app_version: 0.0.1
+app_port: 80
+app_tarball: "{{ app }}-{{ app_version }}.tar.gz"
+app_ini: "{{ app }}-production.ini"
+app_wsgi: "{{ app }}-pyramid.wsgi"
+app_apache_config: "{{ app }}-apache.conf"
+apache_user: www-data
+apache_group: www-data
+globalapi_host: catalog-api-n01
+path_to_venv: "{{ home_folder }}/.venv_{{ app }}"

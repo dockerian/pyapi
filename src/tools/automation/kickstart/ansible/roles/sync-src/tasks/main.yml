@@ -1,0 +1,26 @@
+---
+- name: Remove /opt/helion-addins dir
+  file: path=/opt/helion-addins state=absent
+  tags:
+    - upgrade
+    - install
+
+
+- name: Touch /opt/helion-addins dir
+  file: path=/opt/helion-addins state=directory
+  tags:
+    - upgrade
+    - install
+
+
+# We assume here that the conductor files contain our cicd codebase. Since we
+# can select what is uploaded as the conductor files via the kickstart upload
+# command this allows us to set our env and update code easily.
+- name: Sync Helion Addins Web UI Package
+  synchronize:
+      src: /opt/conductor/
+      dest: /opt/helion-addins
+      rsync_opts: --no-motd,--exclude=.venv
+  tags:
+    - upgrade
+    - install

@@ -1,0 +1,12 @@
+---
+app: globalapi
+app_role: catalog-api
+app_version: 0.0.2
+app_port: 80
+app_tarball: "{{ app }}-{{ app_version }}.tar.gz"
+app_ini: "{{ app }}-production.ini"
+app_wsgi: "{{ app }}-pyramid.wsgi"
+app_apache_config: "{{ app }}-apache.conf"
+apache_user: www-data
+apache_group: www-data
+path_to_venv: "{{ home_folder }}/.venv_{{ app }}"

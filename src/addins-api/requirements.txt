@@ -1,0 +1,7 @@
+pbr>=1.2.0
+pyramid>=1.6a2
+python-keystoneclient==1.6.0
+python-swiftclient==2.4.0
+PyYAML>=3.11
+responses>=0.4.0
+waitress>=0.8.9

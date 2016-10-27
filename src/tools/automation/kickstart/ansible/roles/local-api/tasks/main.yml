@@ -1,0 +1,10 @@
+---
+###
+### Get the python app packaged
+###
+- include: package-addins-api.yml
+
+###
+### Install the python app
+###
+- include: install-addins-api.yml
