@@ -1,0 +1,34 @@
+{
+  "env": {
+    "dev": {
+      "name": "development",
+      "s3_bucket": "bucket-us-east-1-dev"
+    },
+    "prod": {
+      "name": "production",
+      "s3_bucket": "bucket-us-east-1-prod"
+    },
+    "test": {
+      "name": "test",
+      "s3_bucket": "bucket-us-east-1-test"
+    }
+  },
+  "functions": {
+  	"myLambda": {
+      "description": "AWS Lambda Function demo.",
+      "name": "my-aws-lambda",
+      "name_dev": "my-aws-lambda-dev",
+      "name_test": "my-aws-lambda-test",
+      "handler": "handler.process_1st_lambda",
+      "zip": "my_lambda.zip"
+    },
+    "otherLambda": {
+      "description": "Another AWS Lambda Function demo.",
+      "name": "my-other-lambda",
+      "name_dev": "my-other-lambda-dev",
+      "name_test": "my-other-lambda-test",
+      "handler": "handler.process_2nd_lambda",
+      "zip": "other_lambda.zip"
+    }
+  }
+}
