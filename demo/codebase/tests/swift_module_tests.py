@@ -1,18 +1,13 @@
 ﻿import logging
-import mock
-import os
-import StringIO
-import sys
-import tarfile
 import unittest
+
+import mock
+from mock import Mock, MagicMock, patch
+from pyramid import testing
 
 import codebase.swift_module as swift
 
-from pyramid import testing
-from mock import Mock, MagicMock, patch, mock_open
-from swiftclient.exceptions import ClientException
-
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class SwiftTests(unittest.TestCase):
@@ -105,7 +100,7 @@ class SwiftTests(unittest.TestCase):
         success = {'status': 200}
 
         def mock_put_success(container_name, response_dict):
-            logger.debug(
+            LOGGER.debug(
                 'Called with {0} {1}'.format(container_name, response_dict))
             response_dict['status'] = success['status']
 
@@ -128,12 +123,10 @@ class SwiftTests(unittest.TestCase):
                     self.swift_cfg.connection, 'put_container',
                     side_effect=Exception(error_message)) as mocked_put:
                 with self.assertRaises(Exception) as cm:
-                    import codebase.swift
                     swift.ensure_container_exists(config=self.swift_cfg)
                     self.assertEqual(str(cm.exception), error_message)
 
     def test_get_file_contents(self):
-        import codebase.swift
         response = ([{}], '_filecontents')
         self.swift_cfg.connection.get_object = MagicMock()
         self.swift_cfg.connection.get_object.return_value = response
@@ -184,7 +177,6 @@ class SwiftTests(unittest.TestCase):
         with mock.patch.object(
                 self.swift_cfg.connection, 'put_object',
                 side_effect=mock_put_success) as mocked_put:
-            import codebase.swift
             swift.check_container = MagicMock()
             swift.check_container.return_value = True
             filename = 'filename'
@@ -200,7 +192,6 @@ class SwiftTests(unittest.TestCase):
     @patch('sys.getsizeof')
     def test_save_file_Exception(
             self, mock_getsizeof, mock_guess_type):
-        import codebase.swift
         mock_getsizeof.return_value = 999
         mock_guess_type.return_value = ['filetype']
         error_message = "SWIFT PUT OBJECT ERROR"

@@ -1,10 +1,14 @@
-import requests
+"""
+# codebase __init__
+"""
 
+import requests
 from pyramid.config import Configurator
-from pyramid.httpexceptions import HTTPFound
 
 from logger import getLogger
-logger = getLogger(__name__)
+
+# pylint: disable=unused-import.
+LOGGER = getLogger(__name__)
 
 requests.packages.urllib3.disable_warnings()
 
@@ -12,7 +16,7 @@ requests.packages.urllib3.disable_warnings()
 def main(global_config, **settings):
     """ This function returns a Pyramid WSGI application.
     """
-    logger.info('= main :: settings = %s', settings)
+    LOGGER.info('= main :: settings = %s', settings)
 
     config = Configurator(settings=settings)
 

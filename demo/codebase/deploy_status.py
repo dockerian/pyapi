@@ -1,12 +1,13 @@
+"""
 ﻿# deploy_status.py
+"""
+
 import json
-import os
 
 from datetime import datetime
-from time import gmtime, strftime
 
 from logging import getLogger
-logger = getLogger(__name__)
+LOGGER = getLogger(__name__)
 
 
 class DeploymentStatus(object):
@@ -42,18 +43,18 @@ class DeploymentStatus(object):
             contents = self.store.get_file_contents(filename)
 
             if (contents):
-                # logger.debug('Deployment status: {0}'.format(contents))
+                # LOGGER.debug('Deployment status: {0}'.format(contents))
                 result = json.loads(contents)
         except Exception as e:
-            logger.exception("Failed to get status for {0}.\n".format(id))
-        # logger.debug('Deployment result: {0}'.format(result))
+            LOGGER.exception("Failed to get status for {0}.\n".format(id))
+        # LOGGER.debug('Deployment result: {0}'.format(result))
         return result
 
     def set_status(self, id, status):
         """
         set status record (json file) by deployment id and status (string)
         """
-        logger.info('======= Setting status: "{0}" =======\n'.format(status))
+        LOGGER.info('======= Setting status: "{0}" =======\n'.format(status))
 
         result = self.get_status(id)
 

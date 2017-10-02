@@ -1,13 +1,14 @@
+"""
+# swift
+"""
+
 ﻿import logging
 import mimetypes
 import sys
 
-from config import settings
-from keystone import get_auth_token
 from swiftclient import client as swift_client
-from swiftclient.exceptions import ClientException
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class Swift():
@@ -33,7 +34,7 @@ class Swift():
                 insecure=True)
         except Exception as e:
             err_message = "Exception raised initiating a swift connection."
-            logger.exception(err_message)
+            LOGGER.exception(err_message)
             raise
 
     def check_container(self):
@@ -41,7 +42,7 @@ class Swift():
         Determine if default container exists in Swift
         """
         try:
-            logger.debug('Checking container {0}'.format(self.container))
+            LOGGER.debug('Checking container {0}'.format(self.container))
             headers, container_list = self.connection.get_account()
             for container in container_list:
                 if container['name'] == self.container:
@@ -49,7 +50,7 @@ class Swift():
             return False
         except Exception as e:
             err_message = "Exception raised on checking container exists."
-            logger.exception(err_message)
+            LOGGER.exception(err_message)
             raise
 
     def check_file_exists(self, file_name):
@@ -76,13 +77,13 @@ class Swift():
                 response = {}
                 self.connection.put_container(
                     self.container, response_dict=response)
-                logger.debug(
+                LOGGER.debug(
                     "--- Container {0} created".format(self.container))
-                logger.debug("--- Response {0}".format(response))
+                LOGGER.debug("--- Response {0}".format(response))
             except Exception as e:
                 err = "Exception on creating container {0}.".format(
                     self.container)
-                logger.exception(err)
+                LOGGER.exception(err)
                 raise
 
     def get_deployment_list(self):
@@ -122,7 +123,7 @@ class Swift():
             return file_contents
         except Exception as e:
             err = "Exception on getting {0} from Swift.".format(file_name)
-            logger.exception(err)
+            LOGGER.exception(err)
             raise
 
     def get_files_in_container(self):
@@ -149,5 +150,5 @@ class Swift():
             return response
         except Exception as e:
             err = "Exception on trying to save file contents to Swift.\n"
-            logger.exception(err)
+            LOGGER.exception(err)
             raise

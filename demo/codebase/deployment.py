@@ -1,19 +1,19 @@
+"""
 ﻿# deployment.py
-import json
-import shutil
+"""
+
 import tempfile
 import traceback
-
+from logging import getLogger
 from multiprocessing import Process
-from subprocess import call, check_output, CalledProcessError
 
 from deploy import Deployment
 from deploy_status import DeploymentStatus
 from helion_cli import HelionCliComposer
 from package import Package
 from utils import delete_directory_tree, get_store
-from logging import getLogger
-logger = getLogger(__name__)
+
+LOGGER = getLogger(__name__)
 
 
 def deploy_package(package_name, endpoint_url, username, password):
@@ -53,7 +53,7 @@ def deploy_package(package_name, endpoint_url, username, password):
             target=deployment.deploy)
         process.start()
 
-        logger.info('Deployment {0} started for {1}.'.format(
+        LOGGER.info('Deployment {0} started for {1}.'.format(
             deployment_id, package_name))
 
         return {
@@ -65,7 +65,7 @@ def deploy_package(package_name, endpoint_url, username, password):
         stack_info = traceback.format_exc()
         error_message = "Exception on deploy {0}. Details:\n{1}".format(
             package_name, stack_info)
-        logger.exception(error_message)
+        LOGGER.exception(error_message)
         delete_directory_tree(cwd)
         return {'status': 500, 'errors': error_message}
 
@@ -75,12 +75,12 @@ def get_status(id):
     Get the deployment status by id
     """
     try:
-        logger.info("======= deployment::get_status =======")
+        LOGGER.info("======= deployment::get_status =======")
         store = get_store()
         deploy_status = DeploymentStatus(store=store)
         result = deploy_status.get_status(id)
 
-        logger.debug('Deployment result: {0}'.format(result))
+        LOGGER.debug('Deployment result: {0}'.format(result))
         if result == {} or not result['deploy_status']:
             return {'status': 404}
         else:
@@ -90,5 +90,5 @@ def get_status(id):
         error = "Exception on getting deployment status"
         error_message = "{0} for {1}. Details:\n{2}".format(
             error, id, stack_info)
-        logger.exception(error_message)
+        LOGGER.exception(error_message)
         return {'status': 500, 'errors': error_message}

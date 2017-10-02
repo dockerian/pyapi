@@ -1,0 +1,84 @@
+---
+###
+### Install the python app
+###
+- name: Remove the virtualenv if it exists
+  file: path={{ path_to_venv }} state=absent
+  tags:
+    - upgrade
+    - install
+
+- name: Create a virtualenv
+  command: virtualenv {{ path_to_venv }}
+  args:
+    chdir: "{{ home_folder }}/"
+    creates: "{{ path_to_venv }}"
+  tags:
+    - upgrade
+    - install
+
+- name: Install shared/common package into venv
+  pip: executable={{ path_to_venv }}/bin/pip name='file:///opt/helion-addins/pyapi/{{ common_pkg_role }}/dist/{{ common_pkg_tarball }}'
+  register: package_install
+  tags:
+    - upgrade
+    - install
+
+- name: Install app+dependencies into venv
+  pip: executable={{ path_to_venv }}/bin/pip name='file:///opt/helion-addins/pyapi/{{ app_role }}/dist/{{ app_tarball }}'
+  register: package_install
+  tags:
+    - upgrade
+    - install
+
+- name: Copy production.ini to the virtualenv
+  template: src={{ app_ini }}.j2 dest={{ path_to_venv }}/{{ app_ini }} owner={{ apache_user }} group={{ apache_group }}
+  tags:
+    - upgrade
+    - install
+
+- name: Copy pyramid app wsgi to the virtualenv
+  template: src={{ app_wsgi }}.j2 dest={{ path_to_venv}}/{{ app_wsgi }} owner={{ apache_user }} group={{ apache_group }}
+  tags:
+    - upgrade
+    - install
+
+- name: Grant apache ownership of the virtualenv
+  file: path={{ path_to_venv}}/ owner={{ apache_user }} group={{ apache_group }} recurse=yes state=directory
+  tags:
+    - upgrade
+    - install
+
+# required: create a directory for the helion cli if it doesn't exist
+- file: path=/var/www/.helion state=directory mode=0755
+  tags:
+    - upgrade
+    - install
+
+- name: Grant apache ownership of the .helion folder
+  file: path=/var/www/.helion/ owner={{ apache_user }} group={{ apache_group }} recurse=no state=directory
+  tags:
+    - upgrade
+    - install
+
+- name: Copy app apache2 config to apache2 sites available folder
+  template: src={{ app_apache_config }}.j2 dest=/etc/apache2/sites-available/{{ app_apache_config }}
+  tags:
+    - upgrade
+    - install
+
+- name: Disable the default site
+  command: a2dissite 000-default
+  notify:
+    - restart apache2
+  tags:
+    - upgrade
+    - install
+
+- name: Enable the new app/site
+  command: a2ensite {{ app }}-apache
+  notify:
+    - restart apache2
+  tags:
+    - upgrade
+    - install

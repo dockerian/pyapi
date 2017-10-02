@@ -17,7 +17,7 @@ function main() {
   DOCKER_TAGS=$(docker images 2>&1|grep ${DOCKER_IMAG}|awk '{print $1;}')
   # detect if running inside the container
   DOCKER_PROC="$(cat /proc/1/cgroup 2>&1|grep -e "/docker/[0-9a-z]\{64\}"|head -1)"
-  SOURCE_PATH="/src/${DOCKER_NAME}"
+  SOURCE_PATH="/pyapi/${DOCKER_NAME}"
 
   cd -P "${script_base}" && pwd
 

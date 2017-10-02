@@ -1,7 +1,14 @@
-﻿from config import settings
+"""
+# keystone
+"""
+
+﻿from logging import getLogger
+
 from keystoneclient.v2_0 import client as keystone_client
-from logging import getLogger
-logger = getLogger(__name__)
+
+from config import settings
+
+LOGGER = getLogger(__name__)
 
 
 def get_auth_token():
@@ -17,7 +24,7 @@ def get_auth_token():
             insecure=True)
         return keystone.auth_ref['token']['id']
     except Exception as e:
-        logger.error(
+        LOGGER.error(
             "Exception authenticating against Keystone")
-        logger.exception("Details: {0}".format(e))
+        LOGGER.exception("Details: {0}".format(e))
         raise

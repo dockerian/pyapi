@@ -8,6 +8,7 @@
 import unittest
 
 from pyramid import testing
+
 from codebase.logger import getLogger, Logger
 
 

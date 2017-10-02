@@ -1,13 +1,17 @@
+"""
+# swift_module
+"""
+
 ﻿import logging
 import mimetypes
 import sys
 
+from swiftclient import client as swift_client
+
 from config import checks_config, settings
 from keystone import get_auth_token
-from swiftclient import client as swift_client
-from swiftclient.exceptions import ClientException
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 # ================================================
@@ -36,7 +40,7 @@ class SwiftConfig(object):
                 insecure=True)
         except Exception as e:
             err_message = "Exception raised initiating a swift connection."
-            logger.exception(err_message)
+            LOGGER.exception(err_message)
             raise
 
 
@@ -58,7 +62,7 @@ def _get_config():
     """
     This is a fixed/non-mockable func pointer for @check_config decorator
     """
-    # logger.debug('get_swift_config={0}'.format(get_swift_config))
+    # LOGGER.debug('get_swift_config={0}'.format(get_swift_config))
     return get_swift_config()
 
 
@@ -76,18 +80,18 @@ def check_container(config=None):
     config -- an instance of SwiftConfig (optional, default None)
     """
     try:
-        logger.debug('Checking container {0}'.format(config.container))
+        LOGGER.debug('Checking container {0}'.format(config.container))
         headers, container_list = config.connection.get_account()
         for container in container_list:
-            logger.debug("--- container: {0}".format(container['name']))
+            LOGGER.debug("--- container: {0}".format(container['name']))
             if (container['name'] == config.container):
-                logger.debug('--- found {0}'.format(config.container))
+                LOGGER.debug('--- found {0}'.format(config.container))
                 return True
-        logger.debug('--- missing container {0}'.format(config.container))
+        LOGGER.debug('--- missing container {0}'.format(config.container))
         return False
     except Exception as e:
         err_message = "Exception raised on checking container exists."
-        logger.exception(err_message)
+        LOGGER.exception(err_message)
         raise
 
 
@@ -122,13 +126,13 @@ def ensure_container_exists(config=None):
             response = {}
             config.connection.put_container(
                 config.container, response_dict=response)
-            logger.debug(
+            LOGGER.debug(
                 "--- Container {0} created".format(config.container))
-            logger.debug("--- Response {0}".format(response))
+            LOGGER.debug("--- Response {0}".format(response))
         except Exception as e:
             err = "Exception on creating container {0}.".format(
                 config.container)
-            logger.exception(err)
+            LOGGER.exception(err)
             raise
 
 
@@ -155,7 +159,7 @@ def get_file_contents(file_name, config=None):
         return file_contents
     except Exception as e:
         err = "Exception on getting {0} from Swift.".format(file_name)
-        logger.exception(err)
+        LOGGER.exception(err)
         raise
 
 
@@ -221,5 +225,5 @@ def save_file(file_name, file_contents, config=None):
         return response
     except Exception as e:
         err = "Exception on saving file contents to Swift.\n"
-        logger.exception(err)
+        LOGGER.exception(err)
         raise

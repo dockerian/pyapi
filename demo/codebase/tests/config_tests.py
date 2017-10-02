@@ -7,14 +7,15 @@
 '''
 import os
 import unittest
+from logging import getLogger
 
+from mock import Mock, patch, mock_open
 from pyramid import testing
-from mock import Mock, MagicMock, patch, mock_open
 
 from codebase.config import get_setting
 from codebase.config import get_uint
 from codebase.config import settings
-from logging import getLogger
+
 logger = getLogger(__name__)
 
 

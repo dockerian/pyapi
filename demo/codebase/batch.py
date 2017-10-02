@@ -1,11 +1,13 @@
+"""
 ﻿# batch.py
+"""
+
 import json
 import os
 import subprocess
-import threading
 
 from logging import getLogger
-logger = getLogger(__name__)
+LOGGER = getLogger(__name__)
 
 
 class Batch(object):
@@ -54,10 +56,10 @@ class BatchProcess(object):
         self.started = True
         self.set_status('STARTED')
 
-        logger.info('Batch:\n{0}'.format(self.batch_cmds))
+        LOGGER.info('Batch:\n{0}'.format(self.batch_cmds))
         for next_cmd in self.batch_cmds:
-            logger.info('CWD=={0}'.format(next_cmd['cwd']))
-            logger.info('next cmd:\n{0}'.format(
+            LOGGER.info('CWD=={0}'.format(next_cmd['cwd']))
+            LOGGER.info('next cmd:\n{0}'.format(
                 json.dumps(next_cmd, indent=2, sort_keys=True)))
             accept_error = next_cmd['accept_error']
             cmd = next_cmd['command']
@@ -69,13 +71,13 @@ class BatchProcess(object):
                 stdout=subprocess.PIPE)
             next_cmd['stdout'] = proc.communicate()[0]
             stdout = next_cmd['stdout'].decode('string_escape')
-            logger.info('stdout:\n{0}'.format(stdout))
+            LOGGER.info('stdout:\n{0}'.format(stdout))
             exit_code = proc.returncode
 
             if (accept_error or exit_code == 0):
                 self.set_status(next_cmd['status'])
             else:
-                logger.error('Exit code {0} from {1}'.format(exit_code, cmd))
+                LOGGER.error('Exit code {0} from {1}'.format(exit_code, cmd))
                 next_cmd['exit_code'] = exit_code
                 can_continue = False
                 break

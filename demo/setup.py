@@ -1,31 +1,39 @@
+"""
+# setup module
+"""
+
 import os
 
 from setuptools import setup, find_packages
 
-here = os.path.abspath(os.path.dirname(__file__))
-with open(os.path.join(here, 'README.md')) as f:
+HERE = os.path.abspath(os.path.dirname(__file__))
+with open(os.path.join(HERE, 'README.md')) as f:
     README = f.read()
-# with open(os.path.join(here, 'CHANGES.txt')) as f:
+# with open(os.path.join(HERE, 'CHANGES.txt')) as f:
 #     CHANGES = f.read()
 CHANGES = "Changes"
 
-requires = ['pyramid',
-            'python-keystoneclient',
-            'python-swiftclient',
-            'pyyaml',
-            'responses',
-            'sniffer',
-            'waitress']
+PREQ = [
+    'pyramid',
+    'python-keystoneclient',
+    'python-swiftclient',
+    'pyyaml',
+    'responses',
+    'sniffer',
+    'waitress',
+]
 
-requires_test = ['coverage',
-                 'flake8',
-                 'mock',
-                 'nose',
-                 'pylint',
-                 'pyramid',
-                 'tissue',
-                 'webtest',
-                 'tox']
+PREQ_DEV = [
+    'coverage',
+    'flake8',
+    'mock',
+    'nose',
+    'pylint',
+    'pyramid',
+    'tissue',
+    'webtest',
+    'tox',
+]
 
 setup(
     name='codebase',
@@ -42,8 +50,8 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
-    install_requires=requires,
-    tests_require=requires_test,
+    install_requires=PREQ,
+    tests_require=PREQ_DEV,
     test_suite="codebase",
     entry_points="""\
     [paste.app_factory]

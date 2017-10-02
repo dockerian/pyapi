@@ -1,17 +1,13 @@
 ﻿import logging
-import mock
-import os
-import StringIO
-import sys
-import tarfile
 import unittest
 
+import mock
+from mock import Mock, MagicMock, patch
 from pyramid import testing
-from mock import Mock, MagicMock, patch, mock_open
-from swiftclient.exceptions import ClientException
 
 from codebase.swift import Swift
-logger = logging.getLogger(__name__)
+
+LOGGER = logging.getLogger(__name__)
 
 
 class SwiftClassTests(unittest.TestCase):
@@ -90,7 +86,7 @@ class SwiftClassTests(unittest.TestCase):
         success = {'status': 200}
 
         def mock_put_success(container_name, response_dict):
-            logger.debug(
+            LOGGER.debug(
                 'Called with {0} {1}'.format(container_name, response_dict))
             response_dict['status'] = success['status']
 

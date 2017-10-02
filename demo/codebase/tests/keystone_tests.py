@@ -1,12 +1,12 @@
-﻿import mock
-import unittest
+﻿import unittest
+from logging import getLogger
 
+import mock
 from pyramid import testing
 
 from codebase.keystone import *
-from codebase.config import settings
-from logging import getLogger
-logger = getLogger(__name__)
+
+LOGGER = getLogger(__name__)
 
 
 class KeystoneTests(unittest.TestCase):

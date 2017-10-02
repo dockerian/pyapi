@@ -1,14 +1,14 @@
+"""
 ﻿# deploy.py
-import os
-import shutil
+"""
+
 import tempfile
-
-from multiprocessing import Lock, Process, Queue
-from batch import Batch, BatchProcess
-
-from utils import delete_directory_tree
 from logging import getLogger
-logger = getLogger(__name__)
+
+from batch import Batch, BatchProcess
+from utils import delete_directory_tree
+
+LOGGER = getLogger(__name__)
 
 
 class Deployment(object):
@@ -39,15 +39,15 @@ class Deployment(object):
         Cleanup Deployment BatchPrcess working directory
         """
         try:
-            logger.info('Deleting deployment cwd={0}'.format(self.cwd))
+            LOGGER.info('Deleting deployment cwd={0}'.format(self.cwd))
             # Clean up working directory
             delete_directory_tree(self.cwd)
-            logger.info('Deleted deploy deployment cwd.')
+            LOGGER.info('Deleted deploy deployment cwd.')
         except Exception as e:
             err_message = \
                 'Failed to clean up deployment cwd "{0}".' \
                 .format(self.cwd)
-            logger.exception(err_message)
+            LOGGER.exception(err_message)
 
     def deploy(self):
         """
@@ -63,16 +63,16 @@ class Deployment(object):
             self.started = True
             self.download_package()  # preparing package
 
-            logger.info('Starting deployment ...')
+            LOGGER.info('Starting deployment ...')
             process = BatchProcess(self.batch, self.set_status)
-            logger.debug('Batch process: {0}'.format(process))
+            LOGGER.debug('Batch process: {0}'.format(process))
             self.deployed = process.execute()
         except Exception as e:
             err_message = 'Exception on BatchProcess execution.'
-            logger.exception(err_message)
+            LOGGER.exception(err_message)
             self.set_status('FAILED')
         else:
-            logger.info('DONE deployment - {0}'.format(self.deployment_id))
+            LOGGER.info('DONE deployment - {0}'.format(self.deployment_id))
         finally:
             self.cleanup()
 
@@ -81,7 +81,7 @@ class Deployment(object):
             self.set_status('DOWNLOADING')
             pkg_filename = self.package.file_name
             pkg_contents = store.get_file_contents(pkg_filename)
-            logger.info('Downloading package {0} to {1}...'.format(
+            LOGGER.info('Downloading package {0} to {1}...'.format(
                 pkg_filename, self.package.path))
             with open(self.package.path, 'w') as package_file:
                 # write the package as a tar.gz into deployment cwd
@@ -97,7 +97,7 @@ class Deployment(object):
 
         self.batch.clear()
         # add unpacking script to batch
-        logger.info('Adding batch to unpack {0} from {1}'.format(
+        LOGGER.info('Adding batch to unpack {0} from {1}'.format(
             pkg_name, pkg_path))
         self.get_package_batch()
 

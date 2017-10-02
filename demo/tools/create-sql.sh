@@ -6,7 +6,7 @@
 #   - MySQL Workbench 6.0+ with command line tools
 #       must be installed and closed while running this script
 #   - Environment variables:
-#       PROJECT (optional, default value "hancock")
+#       PROJECT (optional, default value "catelog")
 #       DB_PATH (optional, default "../database")
 #
 ################################################################
@@ -15,7 +15,7 @@ script_file="${BASH_SOURCE[0]##*/}"
 script_base="$( cd "$( echo "${BASH_SOURCE[0]%/*}/.." )" && pwd )"
 script_path="${script_base}/tools/${script_file}"
 
-PROJECT=${PROJECT:-hancock}
+PROJECT=${PROJECT:-catelog}
 DB_PATH=${DB_PATH:-${script_base}/database}
 
 schema_file="${PROJECT}.mwb"

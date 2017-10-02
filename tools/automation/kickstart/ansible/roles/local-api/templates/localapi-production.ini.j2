@@ -1,0 +1,88 @@
+###
+# app configuration
+# http://docs.pylonsproject.org/projects/pyramid/en/1.5-branch/narr/environment.html
+###
+
+[app:main]
+use = egg:{{ app }}
+
+pyramid.reload_templates = false
+pyramid.debug_authorization = false
+pyramid.debug_notfound = false
+pyramid.debug_routematch = false
+pyramid.default_locale_name = en
+
+# Cloud Information
+cloud_username = {{ cloud_username }}
+cloud_password = {{ cloud_password }}
+cloud_project_name = {{ cloud_tenant_name }}
+cloud_project_id = {{ cloud_tenant_id }}
+cloud_region = {{ cloud_region }}
+cloud_auth_url = {{ cloud_auth_url }}
+
+# Local installed package storage
+swift_url = {{ swift_url }}
+swift_container = LocalCatalog
+
+# TODO [zhuyux]: use ##hostname## place holder for ansible lineinfile module
+# Global Catalog Service Url
+package_api_url = http://{{ hosts.get('catalog-api-n01')['private'] }}
+
+# Helion CLI location
+helion_cli_location = /opt/helion-addins/pyapi/helion_cli/linux/helion
+
+
+###
+# wsgi server configuration
+###
+
+[server:main]
+use = egg:waitress#main
+host = 0.0.0.0
+port = 8080
+
+###
+# logging configuration
+# http://docs.pylonsproject.org/projects/pyramid/en/1.5-branch/narr/logging.html
+###
+
+[loggers]
+keys = root, {{ app }}
+
+[logger_root]
+handlers = console
+level = NOTSET
+
+[logger_{{ app }}]
+handlers = file, console
+qualname = {{ app }}
+level = DEBUG
+
+[handlers]
+keys = console, file
+
+[handler_console]
+class = StreamHandler
+args = (sys.stderr,)
+level = NOTSET
+formatter = simple
+
+[handler_file]
+class = FileHandler
+interval = midnight
+backupCount = 5
+formatter = complex
+level = DEBUG
+args=('{{ path_to_venv }}/{{ app }}.log',)
+
+[formatters]
+keys = complex, generic, simple
+
+[formatter_complex]
+format=%(asctime)s [%(name)s/%(module)s#%(lineno)d] %(levelname)s: %(message)s
+
+[formatter_generic]
+format = %(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s] %(message)s
+
+[formatter_simple]
+format=%(asctime)s [%(name)s] %(levelname)s: %(message)s

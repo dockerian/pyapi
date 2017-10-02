@@ -1,8 +1,11 @@
+"""
 ﻿# package.py
-import re
-import os
+"""
 
+import os
+import re
 from logging import getLogger
+
 logger = getLogger(__name__)
 
 

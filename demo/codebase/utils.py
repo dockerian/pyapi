@@ -1,14 +1,18 @@
+"""
 ﻿# utils.py
-import re
+"""
+
 import StringIO
+import re
 import shutil
 import tarfile
-
-from config import settngs
-from keystone import get_auth_token
-from swift_class import get_swift, Swift
 from logging import getLogger
-logger = getLogger(__name__)
+
+from swift_class import Swift
+
+from keystone import get_auth_token
+
+LOGGER = getLogger(__name__)
 
 
 def delete_directory_tree(dir_path):
@@ -17,15 +21,15 @@ def delete_directory_tree(dir_path):
     """
     if (dir_path):
         try:
-            logger.info('Deleting {0}'.format(dir_path))
+            LOGGER.info('Deleting {0}'.format(dir_path))
             # Clean up working directory
             shutil.rmtree(dir_path, ignore_errors=True)
-            logger.info('Deleted dir: {0}'.format(dir_path))
+            LOGGER.info('Deleted dir: {0}'.format(dir_path))
         except Exception as e:
             err_message = \
                 'Failed to clean up working directory "{0}".' \
                 .format(dir_path)
-            logger.exception(err_message)
+            LOGGER.exception(err_message)
 
 
 def extract_manifest_from_package(file_contents):

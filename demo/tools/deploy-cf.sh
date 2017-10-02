@@ -4,29 +4,18 @@
 #
 # Command line arguments:
 #   $1 - main stack name of cloudformation
-#   $2 - deployment alias/tag, e.g.: dev (default), prod, test
-#   $3 - cloudformation template file (local path, s3 prefix, or s3:// file)
-#   $4 - parameter file (local path, s3 prefix, or s3:// file)
+#   $2 - deployment alias/tag, e.g.: dev (default), prod, tes
 #
 # Other options
-#   $1 == '--list' to list stacks (any excluding Status contains 'DELETE')
-#   $3 == '--delete' to delete stack ${PREFIX_NAME}-$1-$2
-# or
-#   $@ == '--stage' continue to deploy stage for api gateway stack
-#   $@ == '--stage-only' to check and deploy stage for existing stack
 #   $@ =~ '--test' to print command only (same as DRY_RUN_ONLY=1)
-#   $@ =~ '--s3' to use s3 files (same as USE_S3=1)
 #
 # Expecting the runtime host is assigned with proper AWS Role;
 # or from ~/.aws or the following environment variables (see check_depends)
 #   AWS_ACCESS_KEY_ID
 #   AWS_SECRET_ACCESS_KEY
 #   AWS_DEFAULT_REGION (optional)
-#   S3_BUCKET (optional, default 'dockerian')
-#   S3_PREFIX (optional, default 'Foobar')
-#   S3_PREFIX_BUILDS (optional, default '${S3_PREFIX}/builds')
-#   PREFIX_NAME (optional, default 'dockerian')
-#   STACK_NAME (optional, default 'Foobar')
+#   PREFIX_NAME (optional, default 'CyberInt')
+#   STACK_NAME (optional, default 'Reaper')
 #   BUILD_ENV (optional, default to $2 or 'dev')
 # and git workspace having ".git" folder with optional
 #   GIT_REVISION_TAG (or using current commit sha)
@@ -39,40 +28,32 @@ script_path="${script_base}/tools/${script_file}"
 builds_path="${script_base}/builds"
 config_path="${script_base}/cloudformation"
 cfmain_file="cloudformation.json"
-company_tag="dockerian"
-product_tag="Foobar"
-project_tag="foobar"
-prefix_name="${PREFIX_NAME:-${company_tag}}"
+prefix_name="${PREFIX_NAME:-CyberInt}"
 stacks_list="[]"
 
 # step 0: predefine environment variables
-BUILD_ENV="${BUILD_ENV:-dev}"
+BUILD_ENV="${BUILD_ENV:-test}"
 CHECK_STACK="${CHECK_STACK:-false}"
 CHECK_STACK_ONLY="${CHECK_STACK_ONLY:-false}"
-REST_API_REF_KEY="${REST_API_REF_KEY:-${product_tag}RestApiId}"
-STACK_NAME="${STACK_NAME:-${product_tag}}"
-S3_BUCKET="${S3_BUCKET:-${company_tag}}"
-S3_PREFIX="${S3_PREFIX:-${project_tag}}"
+STACK_NAME="${STACK_NAME:-Sockeye}"
+S3_BUCKET="${S3_BUCKET:-cyber-intel}"
+S3_PREFIX="${S3_PREFIX:-sockeye}"
 S3_PREFIX_BUILDS="${S3_PREFIX_BUILDS:-${S3_PREFIX}/builds}"
-DATA_S3_BUCKET="${DATA_S3_BUCKET:-${S3_BUCKET}}"
 DEPLOY_TAG="${GIT_REVISION_TAG:-None}"
-DRY_RUN_ONLY="${DRY_RUN_ONLY:-false}"
+DRY_RUN_ONLY="${DRY_RUN_ONLY:-true}"
 USE_S3="${USE_S3:-false}"
-
 
 # step 2: main entrypoint to start with parsing command line arguments
 function main() {
   ARG_STACK="${1:-${STACK_NAME}}"
-  ARG_ALIAS="${2:-${BUILD_ENV}}"
-  ARG_PARAM="cloudformation_config_${ARG_ALIAS}.json"
-
-  BUILD_ENV="${ARG_ALIAS}"
-  CF_STACK_NAME="${prefix_name}-${ARG_STACK}-${ARG_ALIAS}"
-  CF_RESPONSE="${CF_STACK_NAME}.json"
+  ARG_ENV="${2:-${BUILD_ENV}}"
+  ARG_PARAM="cloudformation_config_${ARG_ENV}.json"
+  pwd
+  BUILD_ENV="${ARG_ENV}"
+  CF_STACK_NAME="${prefix_name}-${ARG_STACK}-${ARG_ENV}"
   USE_ARG3="false"
   USE_ARG4="false"
   USE_PARAMETERS_FILE="true"  # default to use parameter file until not found
-  USE_PARAMETERS_ON_S3="false"  # default to use local path until found on s3
   HAS_ERROR="false"
 
   shopt -s nocasematch
@@ -85,7 +66,6 @@ function main() {
     usage; return
   fi
 
-  do_cleanup
   check_cmdline_args $@
   check_depends
 
@@ -96,14 +76,11 @@ function main() {
   if [[ "$1" == "list" ]] || [[ "$@" =~ (--list) ]] ; then
     do_list_stacks; return
   fi
-  if [[ "$3" =~ "delete" ]]; then
-    do_delete_stack "${CF_STACK_NAME}"; do_cleanup; return
-  fi
   set -u
 
+  CONFIGURATION="${3:-${config_path}/${cfmain_file}}"
   if [[ "${CHECK_STACK_ONLY}" != "true" ]]; then
     S3_PREFIX_CFT="${S3_PREFIX_BUILDS}/cloudformation"
-    CONFIGURATION="${3:-${config_path}/${cfmain_file}}"
     PARAMETERFILE="${4:-${config_path}/${ARG_PARAM}}"
 
     check_cloudformation_parameter_file
@@ -112,8 +89,6 @@ function main() {
     do_deployment "${CF_STACK_NAME}"
   fi
 
-  do_stage_stack "${CF_STACK_NAME}"
-  do_cleanup
   do_summary
 }
 
@@ -144,63 +119,6 @@ function abspath() {
   set -u
 }
 
-# check deployment-id by rest-api-id
-#   --- return: set CF_DEPLOYMENT_ID (the deployment-id to create stage)
-function check_cf_deployment_id() {
-  if [[ "${1:-${CF_REST_API_ID}}" == "" ]]; then return; fi
-
-  local rest_id="${1:-${CF_REST_API_ID}}"
-  echo ""
-  echo "Checking deployment-id per rest-api-id: ${rest_id}"
-  echo "......................................................................."
-
-  local aws_cli="aws apigateway"
-  local aws_cmd="${aws_cli} get-deployments"
-  local cmd_arg="--rest-api-id ${rest_id}"
-  local s_query=".items[0].id"
-  local cmd_val="$(${aws_cmd} ${cmd_arg}|jq -M -r ${s_query} 2>/dev/null)"
-
-  if [[ "${cmd_val}" == "" ]]; then
-    echo "${aws_cmd} ${cmd_arg}|jq -M -r '${s_query}'"
-    ${aws_cmd} ${cmd_arg}|jq -M -r '${s_query}'
-    log_trace "Cannot find deployment id for stack: ${cf_name}" WARNING
-  else
-    log_debug "${CF_STACK_NAME}-ApiGatewayStack Deployment Id= ${cmd_val}"
-  fi
-
-  CF_DEPLOYMENT_ID="${cmd_val}"
-}
-
-# check rest-api-id from ApiGatewayStack
-#   --- return: set CF_REST_API_ID (the rest-api-id to create stage)
-function check_cf_rest_api_id() {
-  local cf_name="${1:-${CF_STACK_NAME}}"
-  echo ""
-  echo "Checking rest-api-id [${REST_API_REF_KEY}] value from stack: ${cf_name}"
-  echo "......................................................................."
-
-  local aws_cli="aws cloudformation"
-  local aws_cmd="${aws_cli} describe-stacks"
-  local cmd_arg="--stack-name ${cf_name}"
-  local cmd_out="$(${aws_cmd} 2>/dev/null)"  # no arg to search in all stacks
-  local keyword="${cf_name}-ApiGatewayStack"
-  local s_query=".Stacks[]|select(.StackId|tostring|contains(\"${keyword}\"))"
-  local api_out="$(echo ${cmd_out}|jq -M -r ${s_query} 2>/dev/null)"
-  local o_query=".Outputs[]|select(.OutputKey==\"${REST_API_REF_KEY}\")|.OutputValue"
-  local api_val="$(echo ${api_out}|jq -M -r ${o_query} 2>/dev/null)"
-
-  if [[ "${api_val}" == "" ]]; then
-    echo "Filter result of ${keyword} -"
-    echo "${api_out}"
-    echo "......................................................................."
-    log_trace "Cannot find ApiGatewayStack id for stack: ${cf_name}" WARNING
-  else
-    log_debug "${cf_name}-ApiGatewayStack Api Id= ${api_val}"
-  fi
-
-  CF_REST_API_ID="${api_val}"
-}
-
 # check stack status
 #   - args: $1: cloudformation stack name
 #           $2: a string flag to turn on stdout, e.g. 1|enable|on|true|yes
@@ -214,7 +132,6 @@ function check_cf_stack_status() {
   local cmd_out="$(${aws_cmd} ${cmd_arg} 2>/dev/null)"
   local s_query='.Stacks[]|select(.StackName=="'${cf_name}'")|.StackStatus'
   local cf_stat="$(echo ${cmd_out}|jq -M -r ${s_query})"
-
   if [[ "${cf_stat}" != "" ]] && [[ "${on_echo}" =~ (1|enable|on|true|yes) ]]; then
     echo "......................................................................."
     echo "${cmd_out}" | jq -M -r '.Stacks[0]'
@@ -268,19 +185,18 @@ function check_cloudformation_parameter_file() {
   if [[ "${PARAMETERFILE}" =~ (^s3://([^\/]+)/(.+)$) ]]; then return; fi
 
   local src="${script_base}/cloudformation"
-  local cfg="${builds_path}/cloudformation/cf_${BUILD_ENV}_${BUILD_NAME}.json"
 
-  log_trace "Copying parameter file [${BUILD_ENV}] to ${cfg}"
   if [[ "${BUILD_ENV}" == "prod" ]]; then
-    src="${src}/cloudformation_config_prod.json"
+    src="${src}/config_prod.json"
+  elif [[ "${BUILD_ENV}" == "qa" ]]; then
+    src="${src}/config_qa.json"
   else
-    src="${src}/cloudformation_config.json"
+    src="${src}/config_test.json"
   fi
 
-  # replacing place-holder for parameter values
-  create_cloudformation_parameter_file "${src}" "${cfg}"
+  log_trace "Using parameter file ${src} for environment [${BUILD_ENV}]"
 
-  PARAMETERFILE="${cfg}"
+  PARAMETERFILE="${src}"
 }
 
 # check command line arguments
@@ -337,81 +253,25 @@ function check_depends() {
 function check_deploy_args() {
   shopt -s nocasematch
 
-  if [[ "${CONFIGURATION}" =~ (^s3://([^\/]+)/(.+)$) ]]; then
-    S3_BUCKET="${BASH_REMATCH[2]}"
-    CONFIGURATION="${BASH_REMATCH[3]}"
-    USE_S3="true"
-  elif [[ "${USE_S3}" == "true" ]]; then
-    if [[ "${USE_ARG3}" != "true" ]]; then
-      CONFIGURATION="${S3_PREFIX_CFT}/${cfmain_file}"
-    fi
-  else
-    CONFIGURATION="$(abspath "${CONFIGURATION}")"
-  fi
+  CONFIGURATION="$(abspath "${CONFIGURATION}")"
+  PARAMETERFILE="$(abspath "${PARAMETERFILE}")"
 
-  if [[ "${PARAMETERFILE}" =~ (^s3://([^\/]+)/(.+)$) ]]; then
-    local bucket="${BASH_REMATCH[2]}"
-    local prefix="${BASH_REMATCH[3]}"
-    if [[ "${USE_S3}" != "true" ]] || [[ "${S3_BUCKET}" != "${bucket}" ]]; then
-      echo ""
-      echo "......................................................................."
-      log_debug "Configuration = ${CONFIGURATION} [bucket=${S3_BUCKET}]"
-      log_debug "   Parameters = ${PARAMETERFILE} [bucket=${bucket}]"
-      log_error "Must be using same s3:// protocol and from the same s3 bucket [${S3_BUCKET}]."
-    fi
-    PARAMETERFILE="${prefix}"
-    USE_PARAMETERS_ON_S3="true"
-  elif [[ ! -e "${PARAMETERFILE}" ]]; then
-    # assuming on s3 since not found locally
-    if [[ "${USE_S3}" == "true" ]] && [[ "${USE_ARG4}" != "true" ]]; then
-      PARAMETERFILE="${S3_PREFIX_CFT}/${ARG_PARAM}"
-      USE_PARAMETERS_ON_S3="true"
-    fi
-  else
-    PARAMETERFILE="$(abspath "${PARAMETERFILE}")"
-  fi
-
-  if [[ "${USE_S3}" == "true" ]]; then
-    local s3ls_cmd="aws s3 ls s3://${S3_BUCKET}"
-    local s3ls_out="$(${s3ls_cmd})"
-    if [[ "${s3ls_out}" == "" ]]; then
-      log_error 'Cannot access to `'"${s3ls_cmd}"'`.'
-    fi
-
-    local conf_cmd="aws s3 ls s3://${S3_BUCKET}/${CONFIGURATION}"
-    local conf_siz="$(${conf_cmd} | awk '{print $3}')"
-    if [[ "${conf_siz}" == "" ]] || [[ "${conf_siz}" == "0" ]]; then
-      log_error "Cannot find 's3://${S3_BUCKET}/${CONFIGURATION}'."
-    fi
-  else
-    if [[ ! -e "${CONFIGURATION}" ]]; then
-      log_error "Cannot find deployment config file: '${CONFIGURATION}'"
-    fi
-  fi
-
-  if [[ "${USE_PARAMETERS_ON_S3}" == "true" ]]; then
-    local list_cmd="aws s3 ls s3://${S3_BUCKET}/${PARAMETERFILE}"
-    local list_siz="$(${list_cmd} | awk '{print $3}')"
-    if [[ "${list_siz}" == "" ]] || [[ "${list_siz}" == "0" ]]; then
-      log_trace "Cannot find 's3://${S3_BUCKET}/${PARAMETERFILE}'." WARN
-      USE_PARAMETERS_FILE="false"
-    fi
-  elif [[ ! -e "${PARAMETERFILE}" ]]; then
+  if [[ ! "${PARAMETERFILE}" ]]; then
     log_trace "Cannot find deployment parameter file: '${PARAMETERFILE}'" WARN
     USE_PARAMETERS_FILE="false"
   fi
 
+  if [[ ! "${CONFIGURATION}" ]]; then
+    log_trace "Cannot find deployment configguration file: '${CONFIGURATION}'" WARN
+  fi
+
   set +u
   echo "......................................................................."
-  if [[ "${USE_S3}" == "true" ]]; then
-    echo "    S3_BUCKET = ${S3_BUCKET}"
-  fi
   echo "CONFIGURATION = ${CONFIGURATION}"
   echo "   PARAMETERS = ${PARAMETERFILE}"
   echo "......................................................................."
   set -u
 
-  do_cleanup
 }
 
 # check_git_commit_sha_or_tag(): get git commit sha or revision tag
@@ -455,21 +315,20 @@ function check_git_commit_sha_or_tag() {
 # check_response(): check function configuration changes
 #   - $1: phase of the process, e.g. "create", "publish"
 function check_response() {
-  if [[ ! -e "${CF_RESPONSE}" ]]; then return; fi
-
   set +u
   echo ""
-  echo "Checking response from aws cloudformation cli ..."
+  echo "Checking error responses from aws cloudformation cli ..."
   echo "......................................................................."
-  local stack_id="$(cat "${CF_RESPONSE}"|jq -r '.StackId')"
-
-  if [[ "${stack_id}" != "" ]]; then
-    log_debug "StackId == ${stack_id}"
+  if [[ "${CF_RESPONSE_ERROR}" == "" ]]; then
+    log_trace "No cloud formation errors."
+  elif echo "${CF_RESPONSE_ERROR}" | grep -q "No updates are to be performed."; then
+    log_trace "No changes to the cloud formation template detected."
   else
-    cat "${CF_RESPONSE}"
+    echo "${CF_RESPONSE_ERROR}"
     echo "......................................................................."
-    log_trace "Cannot find StackId" WARN
+    log_fatal "Cloud formation error!"
   fi
+
   echo ""
   set -u
 }
@@ -493,63 +352,6 @@ function check_s3_file() {
   aws s3 ls $1
 }
 
-# creating parameter file
-# args: $1 - input file with place holders of parameter values
-#       $2 - output file with replaced parameter values
-function create_cloudformation_parameter_file() {
-  local src="${1:-${script_base}/cloudformation/cloudformation_config.json}"
-  local dst="${2:-${builds_path}/cloudformation/cf_${BUILD_ENV}_${BUILD_TAG}.json}"
-
-  if [[ ! -e "${src}" ]]; then
-    log_error "Cannot find parameter template file: ${src}"
-  fi
-
-  log_trace "Populating values in ${cfg}"
-  echo "......................................................................."
-  echo "       S3_BUCKET = ${S3_BUCKET}"
-  echo "S3_PREFIX_BUILDS = ${S3_PREFIX_BUILDS}"
-  echo "  DATA_S3_BUCKET = ${DATA_S3_BUCKET}"
-  echo "       BUILD_ENV = ${BUILD_ENV}"
-  echo ""
-
-  while IFS='' read -r line || [[ -n "${line}" ]]; do
-    line="${line//__BUILD_ENV__/${BUILD_ENV}}"
-    line="${line//__DATA_S3_BUCKET__/${DATA_S3_BUCKET}}"
-    line="${line//__BUILDS_PREFIX__/${S3_PREFIX_BUILDS}}"
-    line="${line//__S3_BUCKET__/${S3_BUCKET}}"
-    echo "${line}"
-  done < "${src}" > "${dst}"
-}
-
-# do_cleanup(): clean up temporary files
-function do_cleanup() {
-  if [[ -e "${CF_RESPONSE}" ]] && [[ "${CF_RESPONSE}" =~ (.json$) ]]; then
-    rm -rf "${CF_RESPONSE}"
-  fi
-}
-
-# do_delete_stack(): delete a cloudformation stack
-function do_delete_stack() {
-  local cf_name="${1:-${CF_STACK_NAME}}"
-  local aws_cli="aws cloudformation"
-  local aws_cmd="${aws_cli} delete-stack"
-  local cmd_arg="--stack-name ${cf_name}"
-  local cmd_opt="--client-request-token ${cf_name}"
-  set +u
-  echo ""
-  echo "Deleting cloudformation stack ..."
-  echo -e "  - name: ${cf_name}"
-  echo -e "  - exec:\n\n${aws_cmd} ${cmd_arg} ${cmd_opt}"
-  echo ""
-  set -u
-
-  if [[ "${DRY_RUN_ONLY}" == "true" ]]; then return; fi
-
-  ${aws_cmd} ${cmd_arg} ${cmd_opt}
-
-  check_return_code $? "${aws_cmd}"
-}
-
 # do_deployment(): deploy cloudformation stack
 function do_deployment() {
   local cf_name="${1:-${CF_STACK_NAME}}"
@@ -566,6 +368,7 @@ function do_deployment() {
     else
       log_trace "Updating stack [${cf_name}] ..."
       do_deploy_stack update "${cf_name}"
+      do_update_services
     fi
   else
     log_trace "Creating stack [${cf_name}] ..."
@@ -588,25 +391,9 @@ function do_deploy_stack() {
   local cmd_opt="--template-body file://${CONFIGURATION}"
   local aws_url="https://${S3_BUCKET}.s3.amazonaws.com"
 
-  if [[ "${USE_S3}" == "true" ]]; then
-    cmd_opt="--template-url ${aws_url}/${CONFIGURATION}"
-  fi
-
-  if [[ "${USE_PARAMETERS_FILE}" == "true" ]]; then
-    if [[ "${USE_PARAMETERS_ON_S3}" == "true" ]]; then
-      cmd_opt="${cmd_opt} --parameters ${aws_url}/${PARAMETERFILE}"
-    else
-      cmd_opt="${cmd_opt} --parameters file://${PARAMETERFILE}"
-      echo "......................................................................."
-      cat ${PARAMETERFILE}
-    fi
-  else
-    cmd_kv1="ParameterKey=Environment,ParameterValue=${BUILD_ENV}"
-    cmd_kv2="ParameterKey=FoobarDataBucket,ParameterValue=${DATA_S3_BUCKET}"
-    cmd_kv3="ParameterKey=FoobarBucket,ParameterValue=${S3_BUCKET}"
-    cmd_kv4="ParameterKey=FoobarBuildsPrefix,ParameterValue=${S3_PREFIX}"
-    cmd_opt="${cmd_opt} --parameters ${cmd_kv1} ${cmd_kv2} ${cmd_kv3} ${cmd_kv4}"
-  fi
+  cmd_opt="${cmd_opt} --parameters file://${PARAMETERFILE}"
+  echo "......................................................................."
+  cat ${PARAMETERFILE}
 
   local cmdline="${aws_cmd} ${cmd_arg} ${cmd_opt}"
   local cmdname="$([[ "$1" == "create" ]] && echo "Creating" || echo "Updating")"
@@ -624,11 +411,12 @@ function do_deploy_stack() {
     return
   fi
 
-  ${cmdline} > "${CF_RESPONSE}"
-
-  check_return_code $? "${aws_cmd}"
+  set +e
+  CF_RESPONSE_ERROR=$(${cmdline} 2>&1 > /dev/null)
+  set -e
 
   check_response
+  check_cf_stack_status_complete
 }
 
 # do_list_stacks(): display deployed stacks
@@ -646,63 +434,6 @@ function do_list_stacks() {
   set -u
 }
 
-# do_stage_stack(): create stage for api gateway
-function do_stage_stack() {
-  local cf_name="${1:-${CF_STACK_NAME}}"
-  local aws_cli="aws apigateway"
-  local aws_cmd="${aws_cli} create-deployment"
-  local cmd_arg="--stage-name ${BUILD_ENV}"
-  local ymd_utc="$(TZ=UTC date +'%Y-%m-%d %H:%M:%S')"
-  local cmd_opt="${cf_name} Build.${BUILD_NAME} [${S3_BUCKET}] @ ${ymd_utc}"
-  local cmdline=""
-  set +u
-  echo "......................................................................."
-  echo "Continue stagging for stack: ${cf_name} [stage: ${BUILD_ENV}]"
-  set -u
-
-  if [[ "${CHECK_STACK}" != "true" ]]; then
-    echo "- NOTE: The stack may still be in progress. Use '--stage' option to continue."
-    return
-  fi
-
-  check_cf_stack_status_complete "${cf_name}"
-
-  check_cf_rest_api_id "${cf_name}"
-
-  if [[ "${CF_REST_API_ID}" == "" ]]; then
-    if [[ ! "${CF_STACK_STATUS}" =~ (.+_COMPLETE) ]]; then
-      log_error "Cannot continue since the stack status is not complete."
-    fi
-    log_trace "${cf_name} status: ${CF_STACK_STATUS}"
-    log_error "Cannot find rest-api-id for stack '${cf_name}'."
-    return
-  fi
-
-  cmd_arg="${cmd_arg} --rest-api-id ${CF_REST_API_ID}"
-  cmd_arg="${cmd_arg} --description"
-  cmdline="${aws_cmd} ${cmd_arg}"
-  set +u
-  echo "......................................................................."
-  echo "Creating deployment for stack ${cf_name}"
-  echo -e "  - name: ${cf_name}"
-  echo -e "  - rest: ${CF_REST_API_ID} [stage: ${BUILD_ENV}]"
-  echo -e "  - exec:\n\n${cmdline} '${cmd_opt}'"
-  echo ""
-  set -u
-
-  if [[ "${DRY_RUN_ONLY}" == "true" ]]; then
-    log_trace "Run the following command to create deployment:"
-    echo ""
-    echo "${cmdline} '${cmd_opt}'"
-    echo ""
-    return
-  fi
-
-  ${cmdline} "${cmd_opt}"
-
-  check_return_code $? "${aws_cmd}"
-}
-
 # print out summary info
 function do_summary() {
   local action="${1:-deployed stack}"
@@ -716,12 +447,82 @@ function do_summary() {
   echo ""
 }
 
+function do_update_services() {
+  get_service_arns
+
+  local cmd="aws ecs update-service --force-new-deployment --cluster ${ECS_CLUSTERS} --service"
+
+  for service in ${ECS_SERVICES}; do
+    echo "Redeploying ${service}..."
+    local response=$(${cmd} "${service}" 2>&1 > /dev/null)
+    if [[ ${response} != "" ]]; then
+      log_trace "Error when updating service ${service}: ${response}" WARNING
+    fi
+  done
+}
+
+function get_cluster_arn() {
+  local cf_name="${1:-${CF_STACK_NAME}}"
+  echo ""
+  echo "Getting Sockeye cluster arn from stack: ${cf_name}"
+  echo "......................................................................."
+
+  local aws_cli="aws cloudformation"
+  local aws_cmd="${aws_cli} describe-stack-resources"
+  local cmd_arg="--stack-name ${cf_name}"
+  local cmd_out="$(${aws_cmd} ${cmd_arg} 2>/dev/null)"
+  local stquery=".StackResources[]|select(.ResourceType|tostring"
+  local cluster_query="${stquery}|contains(\"ECS::Cluster\")).PhysicalResourceId"
+  ECS_CLUSTERS="$(echo ${cmd_out}|jq -M -r ${cluster_query} 2>/dev/null)"
+
+  if [[ "${ECS_CLUSTERS}" == "" ]]; then
+    echo "${cmd_out}"
+    echo "......................................................................."
+    log_trace "Cannot find any ECS Clusters associated with stack: ${cf_name}" WARNING
+  fi
+}
+
+function get_service_arns() {
+  local cf_name="${1:-${CF_STACK_NAME}}"
+  echo ""
+  echo "Getting Sockeye service names from stack: ${cf_name}"
+  echo "......................................................................."
+
+  local aws_cli="aws cloudformation"
+  local aws_cmd="${aws_cli} describe-stack-resources"
+  local cmd_arg="--stack-name ${cf_name}"
+  local cmd_out="$(${aws_cmd} ${cmd_arg} 2>/dev/null)"
+  local stquery=".StackResources[]|select(.ResourceType|tostring"
+  local cluster_query="${stquery}|contains(\"ECS::Cluster\")).PhysicalResourceId"
+  local service_query="${stquery}|contains(\"ECS::Service\")).PhysicalResourceId"
+
+  ECS_CLUSTERS="$(echo ${cmd_out}|jq -M -r ${cluster_query} 2>/dev/null)"
+  ECS_SERVICES="$(echo ${cmd_out}|jq -M -r ${service_query} 2>/dev/null)"
+  # readarray -t y <<<"$ECS_SERVICES"
+
+  echo "ECS clusters: ${ECS_CLUSTERS}"
+  if [[ "${ECS_CLUSTERS}" == "" ]]; then
+    echo "${cmd_out}"
+    echo "......................................................................."
+    log_trace "Cannot find any ECS Clusters associated with stack: ${cf_name}" WARNING
+  fi
+
+  echo "-----------------------------------------------------------------------"
+  echo "${ECS_SERVICES}"
+  echo ""
+  if [[ "${ECS_SERVICES}" == "" ]]; then
+    echo "${cmd_out}"
+    echo "......................................................................."
+    log_trace "Cannot find any services associated with stack: ${cf_name}" WARNING
+  fi
+}
+
 # log_debug() func: print message as debug warning
 function log_debug() {
   log_trace "$1" "${2:-DEBUG}"
 }
 
-# log_error() func: print message as debug warning for ERROR or FATAL
+# log_error() func: exits with non-zero code on error unless $2 specified
 function log_error() {
   log_trace "$1" "ERROR" $2
 }
@@ -750,7 +551,7 @@ function log_trace() {
 function usage() {
   local headers="0"
   echo ""
-  echo "USAGE: ${script_file} --help"
+  echo "USAGE: ${script_file} {PROJECT_NAME} {ENVIRONMENT}"
   echo ""
   # echo "$(cat ${script_path} | grep -e '^#   \$[1-9] - ')"
   while IFS='' read -r line || [[ -n "${line}" ]]; do

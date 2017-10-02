@@ -1,28 +1,38 @@
 #!/usr/bin/env bash
 ##############################################################################
-# Checkout specific commit sha or revision tag from current repository branch
+# Checkout specific commit sha or revision tag from a branch
+# Author: jzhu@infoblox.com
 #
 # Command line arguments:
 #   $1 : git commit sha (or revision tag with --tag)
 #   --tag : using revision tag instead of commit sha
 #
 # Expecting in git workspace having ".git" folder with optional
+#   GIT_BRANCH (git branch, default to 'master')
 #   GIT_REVISION_TAG (takes precedence, or using GIT_REVISION_SHA)
 #   GIT_REVISION_SHA (or using current commit sha)
-# if no command line arguments is provided.
+#       if no command line arguments is provided.
+#
+# ********
+# CAUTION: This will RESET --HARD to ${GIT_BRANCH}. Use on a clean workspace.
+# ********
 #
 # NOTE: Checking out revision tag or commit sha could detach from HEAD.
 #       Recommend to reset back to origin/master by
 #           git reset --hard
 #           git checkout master && git reset --hard origin/master
 #           git clean -d -x -f
+#      Also disable pager on CI/CD server (e.g. Jenkins)
+#           git config --global core.pager cat
 #
 ##############################################################################
 set -eo pipefail
 script_file="${BASH_SOURCE[0]##*/}"
+# assuming this script is under ${script_base}/tools
 script_base="$( cd "$( echo "${BASH_SOURCE[0]%/*}/.." )" && pwd )"
 script_path="${script_base}/tools/${script_file}"
 
+GIT_BRANCH="${GIT_BRANCH:-master}"
 GIT_REVISION_SHA="${GIT_REVISION_SHA:-None}"
 GIT_REVISION_TAG="${GIT_REVISION_TAG:-None}"
 USE_REVISION_TAG="false"
@@ -86,19 +96,21 @@ function do_checkout() {
          log_trace "${sha_info} does not match to input ${rev_info}" WARNING
   fi
   if [[ "${github_rev}" != "None" ]]; then
-    log_trace "--- Cleaning up git workspace ${PWD} ---"
+    log_trace "--- Resetting branch  ---"
     git reset --hard
-    git checkout master && git reset --hard origin/master
+    log_trace "--- Checking out branch ${GIT_BRANCH} ---"
+    git checkout ${GIT_BRANCH} && git reset --hard origin/${GIT_BRANCH}
+    log_trace "--- Cleaning up git workspace ${PWD} ---"
     git clean -d -x -f
 
     if [[ "${USE_REVISION_TAG}" == "true" ]]; then
       log_trace "--- Checking out revision tag [${github_rev}] ---"
-      git checkout tags/${github_rev}  # NOTE: this is detaching from HEAD
-      # git reset --hard "${github_rev}"
+      # git checkout -f -q --no-progress tags/${github_rev}  # NOTE: this is detaching from HEAD
+      git reset -q --hard "${github_rev}"
     elif [[ "${github_rev}" != "${commit_sha}" ]]; then
       log_trace "--- Checking out revision sha [${github_rev}] ---"
-      git checkout ${github_rev}  # NOTE: this is detaching from HEAD
-      # git reset --hard "${github_rev}"
+      # git checkout -f -q --no-progress ${github_rev}  # NOTE: this is detaching from HEAD
+      git reset -q --hard "${github_rev}"
     fi
   else
     log_trace "--- Using current commit [${commit_sha}] ---"

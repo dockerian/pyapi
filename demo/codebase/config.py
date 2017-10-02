@@ -1,18 +1,20 @@
-﻿'''
+"""
 # config
 
 @author: Jason Zhu
 @email: jason_zhuyx@hotmail.com
 
-'''
-import os
-import yaml
-import logging
-import pyramid
+"""
 
+import logging
+import os
 from base64 import b64decode
 
-logger = logging.getLogger(__name__)
+import boto3
+import yaml
+from pyapi.utils.extension import get_json
+
+LOGGER = logging.getLogger(__name__)
 
 CONFIG_DEFAULT = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), 'config.yaml')
@@ -41,7 +43,9 @@ class Singleton(_Singleton('SingletonMeta', (object,), {})):
     """
     Singleton class
     """
-    pass
+    def __init__(self):
+        """Singleton class constructor"""
+        pass
 
 
 class Config(Singleton):
@@ -49,59 +53,31 @@ class Config(Singleton):
     Config class derived from Singleton
     """
     def __init__(self, config_file=CONFIG_DEFAULT):
+        super(Config, self).__init__()
         self.config_file = config_file
-        with open(self.config_file, "r") as f:
-            logger.info("reading %s", config_file)
-            data = yaml.safe_load(f)
-            logger.info('config: %s', str(data))
-            self.settings = flatten_object(data)
-            logger.info('settings: %s', str(self.settings))
+        if not os.path.isfile(self.config_file):
+            self.settings = {}
+            return
+        with open(self.config_file, "r") as conf:
+            LOGGER.info("reading %s", self.config_file)
+            self.__data__ = yaml.safe_load(conf)
+            LOGGER.info('config data: \n%s', get_json(self.__data__))
+            self.settings = flatten_object(self.__data__)
+            LOGGER.info('settings: \n%s', get_json(self.settings))
 
 
-def checks_config(config_func):
+def check_encrypted_text(setting_key, key_val):
     """
-    Get decorator to use config_func as initiator for 'config' arg
-
-    Keyword arguments:
-    config_func -- a function to get proper configuration
+    Check if the text is encrypted by a KMS key
     """
-    def checks_config_decorator(original_func):
-        """
-        Call decorated original_func with checking its 'config' arg
-
-        Keyword arguments:
-        func -- original function to be decorated
-        """
-        def _arg_index_of(func, name):
-            """
-            Get the index of a named arg on a func call
-            """
-            import inspect
-            argspec = inspect.getargspec(func)
-            for i in range(len(argspec[0])):
-                if (argspec[0][i] == name):
-                    logger.debug("argspec[0][{0}]=={1}".format(i, name))
-                    return i
-            return -1
-
-        def _checks_config_wrapper(*args, **kwargs):
-            """
-            Check 'config' arg before calling original_func
-            Call specified config_func if 'config' arg value is None.
-            """
-            arg_idx = _arg_index_of(original_func, 'config')
-            has_arg = 0 <= arg_idx and arg_idx < len(args)
-            arg_cfg = args[arg_idx] if (has_arg) else None
-            kwa_cfg = kwargs.get('config')
-            if (kwa_cfg is None and arg_cfg is None):
-                logger.debug('Getting config by {0}'.format(config_func))
-                kwargs['config'] = config_func()
-            return original_func(*args, **kwargs)
-
-        # calls the original function with checking proper configuration
-        return _checks_config_wrapper
-    # returns a decorated function
-    return checks_config_decorator
+    text = str(key_val)
+    skey = str(setting_key).lower()
+    aorp = 'password' in skey or 'api_key' in skey
+    if aorp and len(text) > 128 and ' ' not in text:
+        decrypted = boto3.client('kms').decrypt(
+            CiphertextBlob=b64decode(text))['Plaintext']
+        return decrypted
+    return key_val
 
 
 def flatten_object(obj, result=None):
@@ -131,7 +107,41 @@ def flatten_object(obj, result=None):
     return result
 
 
-def get_setting(setting_key=None, default_value=''):
+def get_boolean(key_name, default_value=False):
+    """
+    Get boolean value for a key; otherwise, return default value.
+    """
+    if not key_name:
+        return default_value
+
+    key_val = str(settings(str(key_name))).lower()
+    if key_val in ["1", "on", "true", "yes"]:
+        return True
+    return False if key_val else default_value
+
+
+def get_config_data():
+    """
+    Get config data object.
+    """
+    return Config().__data__
+
+
+def get_uint(key_name, default_value=0):
+    """
+    Get unsigned integer value for a key; otherwise, return default value.
+    """
+    if not key_name:
+        return default_value
+    try:
+        key_val = str(settings(str(key_name)))
+        key_int = int(key_val) if key_val.isdigit() else 0
+        return key_int if key_int > 0 else default_value
+    except Exception:
+        return default_value
+
+
+def settings(setting_key=None, default_value=''):
     """
     Get the instance by a key in application settings (config.yaml file)
 
@@ -148,26 +158,6 @@ def get_setting(setting_key=None, default_value=''):
     if not key_val:
         key_val = config.get(setting_key, default_value)
 
+    key_val = check_encrypted_text(setting_key, key_val)
+
     return '' if key_val is None else key_val
-
-
-def get_uint(key_name, default_value=0):
-    """
-    Get unsigned integer value for a key; otherwise, return default value.
-    """
-    if not key_name:
-        return default_value
-    try:
-        key_val = str(settings(key_name))
-        key_int = int(key_val) if key_val.isdigit() else 0
-        return key_int if key_int > 0 else default_value
-    except Exception:
-        return default_value
-
-
-def settings(item):
-    """
-    Get a reference to the settings in the .ini file
-    """
-    registry = pyramid.threadlocal.get_current_registry()
-    return registry.settings.get(item, None)
