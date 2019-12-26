@@ -5,4 +5,4 @@
 pyramid==1.6a1
 python-keystoneclient==1.6.0
 python-swiftclient==2.4.0
-waitress==0.8.9
+waitress==1.4.1
