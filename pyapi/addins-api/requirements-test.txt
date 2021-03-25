@@ -7,7 +7,7 @@ pylint==1.4.4
 pyramid==1.6a2
 python-keystoneclient==3.0.0
 python-swiftclient==2.4.0
-PyYAML==3.11
+PyYAML==5.4
 responses==0.4.0
 tissue==0.9.2
 tox==2.1.1
